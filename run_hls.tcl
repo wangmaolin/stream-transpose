@@ -32,7 +32,7 @@ set_part  {xcvu9p-flga2104-2-i}
 create_clock -period "200MHz"
 
 # Set variable to select which steps to execute
-set hls_exec 2
+set hls_exec 3
 
 
 csim_design
