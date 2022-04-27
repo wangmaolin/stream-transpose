@@ -15,33 +15,81 @@
  */
 #include "example.h"
 
+const int max_trip = MAX_SIZE;
+
+void row_in(data_stream &din,
+            inst_stream &instruction,
+            data_pack_t column[MAX_SIZE],
+            col_stream &ready)
+{
+row_in_ever_loop:
+    do
+    {
+        inst_t array_size = instruction.read();
+        col_idx_t loop_bound = array_size.data;
+
+    row_in_loop_i:
+        for (col_idx_t i = 0; i < loop_bound; i++)
+        {
+ #pragma HLS LOOP_TRIPCOUNT max=max_trip
+        row_in_loop_j:
+            for (col_idx_t j = 0; j < loop_bound; j++)
+            {
+ #pragma HLS LOOP_TRIPCOUNT max=max_trip
+                data_t v = din.read();
+                column[j].data[i] = v;
+                if (i == loop_bound-1)
+                {
+                    ready << loop_bound;
+                    ready << j;
+                }
+            }
+        }
+
+        if (array_size.last)
+        {
+            ready << 0;
+            break;
+        }
+
+    } while (1);
+}
+
+void col_out(data_stream &dout,
+             data_pack_t column[MAX_SIZE],
+             col_stream &ready)
+{
+col_out_ever_loop:
+    do
+    {
+        col_idx_t loop_bound = ready.read();
+
+        if (loop_bound == 0)
+        {
+            break;
+        }
+ 
+        col_idx_t col_idx = ready.read();
+    col_out_loop_j:
+        for (col_idx_t j = 0; j < loop_bound; j++)
+        {
+ #pragma HLS LOOP_TRIPCOUNT max=max_trip
+            data_t v = column[col_idx].data[j];
+            dout << v;
+        }
+
+    } while (1);
+}
+
 void stream_transpose(data_stream &din, inst_stream &instruction, data_stream &dout){
 #pragma HLS INTERFACE axis port=din
 #pragma HLS INTERFACE axis port=instruction
 #pragma HLS INTERFACE axis port=dout
 
-    data_t localA[MAX_SIZE][MAX_SIZE];
-
-    inst_t array_size;
-    
-    do {
-        // the size of array to be transposed
-        array_size = instruction.read();
-
-        for(int i=0; i<array_size.data; i++)
-        {
-            for(int j=0; j<array_size.data; j++)
-            {
-                localA[i][j] = din.read(); 
-            }
-        }
-
-        for(int i=0; i<array_size.data; i++)
-        {
-            for(int j=0; j<array_size.data; j++)
-            {
-                dout.write(localA[j][i]); 
-            }
-        }
-    } while (!array_size.last);
+    data_pack_t column[MAX_SIZE];
+    col_stream ready; 
+    // the size of array to be transposed
+#pragma HLS DATAFLOW
+    row_in(din, instruction, column, ready);
+    col_out(dout, column, ready);
 }
