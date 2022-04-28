@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include <stdio.h>
 #include "example.h"
 
 int main()
 {
   data_t i;
-  short int test_size = 4;
+  short int test_size = 8;
 
   data_stream din, dout;
   inst_stream inst;
